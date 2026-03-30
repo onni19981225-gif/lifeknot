@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lifeknot 2.7 - 實名配對版</title>
+    <style>
+        :root {
+            --primary: #4A6D4A;
+            --primary-soft: #E8F0E8;
+            --primary-text: #3A5A3A;
+            --accent: #E9967A;
+            --bg: #FDFBFA;
+            --card: #FFFFFF;
+            --text-main: #2D3436;
+            --text-sub: #8E9797;
+            --shadow: 0 12px 40px rgba(0,0,0,0.04);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, "SF Pro Display", "PingFang TC", sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 0; overflow-x: hidden; }
+
+        header { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.02); }
+        .menu-btn { font-size: 24px; cursor: pointer; color: var(--primary); width: 40px; }
+        .logo { font-weight: 800; color: var(--primary); font-size: 1.1rem; flex: 1; text-align: center; }
+
+        .content { padding: 20px 24px; max-width: 500px; margin: 0 auto; }
+        .status-card { background: var(--primary-soft); border-radius: 32px; padding: 40px 24px; text-align: center; margin-bottom: 35px; }
+
+        .sidebar { position: fixed; top: 0; left: -100%; width: 85%; max-width: 320px; height: 100%; background: var(--card); transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 2001; padding: 60px 24px; display: flex; flex-direction: column; }
+        .sidebar.active { left: 0; }
+        .sidebar-item { padding: 20px 0; border-bottom: 1px solid #F8F8F8; display: flex; justify-content: space-between; cursor: pointer; }
+        
+        .identity-footer { margin-top: auto; padding-bottom: 30px; }
+        .mini-switcher { display: flex; background: #F5F5F5; border-radius: 12px; padding: 2px; }
+        .mini-btn { flex: 1; text-align: center; padding: 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; color: #AAA; cursor: pointer; }
+        .mini-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
+        .modal-sheet { position: fixed; bottom: -100%; left: 0; width: 100%; background: white; border-radius: 36px 36px 0 0; padding: 32px 24px 60px; z-index: 3000; transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); }
+        .modal-sheet.active { bottom: 0; }
+        .handle { width: 40px; height: 5px; background: #EEE; border-radius: 10px; margin: -10px auto 25px; }
+
+        .btn-primary { background: var(--primary); color: white; width: 100%; padding: 18px; border: none; border-radius: 20px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+        .btn-accent { background: var(--accent); color: white; padding: 8px 16px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; }
+
+        .note-card { background: var(--card); padding: 24px; border-radius: 28px; margin-bottom: 16px; box-shadow: var(--shadow); }
+        .target-tag { font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-top: 12px; }
+
+        .invite-box { background: #F5F7F5; padding: 20px; border-radius: 24px; text-align: center; margin: 15px 0; border: 1px dashed var(--primary); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(6px); display: none; z-index: 2000; }
+        
+        input, select, textarea { width: 100%; padding: 16px; margin: 10px 0; border-radius: 15px; border: 1px solid #F0F0F0; background: #F9F9FB; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+<nav class="sidebar" id="sidebar">
+    <div style="font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 35px;">Lifeknot 設定</div>
+    <div class="sidebar-item" onclick="openSheet('sheet-hours')"><span>🕒 偵測頻率</span><strong id="side-hours">24 小時</strong></div>
+    <div class="sidebar-item" onclick="openSheet('sheet-invite-mgr')"><span>👥 關心我的人</span><strong id="side-contact-count">1 位</strong></div>
+    <div class="identity-footer">
+        <div class="mini-switcher">
+            <div id="m-self" class="mini-btn active" onclick="switchMode('self')">我的守護</div>
+            <div id="m-care" class="mini-btn" onclick="switchMode('care')">我關心的人</div>
+        </div>
+    </div>
+</nav>
+
+<header>
+    <div class="menu-btn" onclick="toggleSidebar()">☰</div>
+    <div class="logo">Lifeknot</div>
+    <div style="width: 40px;"></div>
+</header>
+
+<div class="content">
+    <div id="view-self">
+        <div class="status-card">
+            <div style="font-size: 2.8rem; margin-bottom: 12px;">🌿</div>
+            <h2 style="color:var(--primary-text); font-size:1.4rem; font-weight:800; margin:0;">一切平安</h2>
+            <div id="main-status-text" style="color:var(--primary-text); opacity:0.6; font-size:0.85rem; margin-top:8px;">守護偵測中</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+            <h3 style="margin:0;">平安叮嚀</h3>
+            <button class="btn-accent" onclick="openNoteSheet()">＋ 新增</button>
+        </div>
+        <div id="note-list"></div>
+    </div>
+
+    <div id="view-care" style="display:none; text-align:center; padding:60px 20px;">
+        <div style="font-size: 3.5rem; margin-bottom: 20px;">🤝</div>
+        <h3 style="color:var(--primary);">加入守護對象</h3>
+        <p style="color:var(--text-sub); font-size:0.9rem;">輸入對方的「結伴代碼」來建立守護關係</p>
+        <input type="text" id="input-pair-code" placeholder="請輸入結伴代碼 (如: KNOT-88)" style="text-align:center; letter-spacing:2px;">
+        <button class="btn-primary" onclick="pairWithUser()">立即配對</button>
+    </div>
+</div>
+
+<div class="modal-sheet" id="sheet-invite-mgr">
+    <div class="handle"></div>
+    <h3 style="margin-top:0">關心我的人</h3>
+    <div id="contacts-list" style="margin-bottom:20px;"></div>
+    
+    <div class="invite-box">
+        <p style="margin:0; font-size:0.85rem; color:var(--primary-text);">發送新邀請</p>
+        <div id="generated-code" style="font-size:1.8rem; font-weight:900; color:var(--primary); margin:10px 0; letter-spacing:3px;">----</div>
+        <button class="btn-primary" style="margin:0; padding:12px;" onclick="generateNewCode()">產生新代碼</button>
+    </div>
+</div>
+
+<div class="modal-sheet" id="sheet-note">
+    <div class="handle"></div>
+    <h3 style="margin-top:0">平安叮嚀</h3>
+    <input type="text" id="n-title" placeholder="標題 (如: 銀行密碼)">
+    <textarea id="n-body" rows="4" placeholder="交代細節..." style="width:100%; padding:16px; border-radius:15px; border:1px solid #F0F0F0; background:#F9F9FB; font-size:1rem;"></textarea>
+    <label style="font-size:0.8rem; font-weight:700; color:var(--primary); margin-left:5px;">指定發送對象：</label>
+    <select id="n-target-select"></select>
+    <button class="btn-primary" onclick="saveNote()">儲存叮嚀</button>
+</div>
+
+<div class="modal-sheet" id="sheet-hours">
+    <div class="handle"></div>
+    <h3 style="margin-top:0">偵測頻率</h3>
+    <select id="select-hours" onchange="updateHours()">
+        <option value="12">12 小時</option>
+        <option value="24" selected>24 小時</option>
+        <option value="48">48 小時</option>
+    </select>
+    <button class="btn-primary" onclick="closeAll()">完成</button>
+</div>
+
+<script>
+    let state = {
+        mode: 'self',
+        hours: 24,
+        contacts: [
+            { id: 1, name: '太太', email: 'wife@mail.com', paired: true }
+        ],
+        notes: [
+            { id: 501, title: '保險櫃密碼', body: '放在書房保險箱', targetId: 1 }
+        ],
+        tempCode: null
+    };
+
+    // --- 核心導覽 ---
+    function toggleSidebar() { document.getElementById('sidebar').classList.add('active'); document.getElementById('overlay').style.display = 'block'; }
+    function closeAll() { document.getElementById('sidebar').classList.remove('active'); document.querySelectorAll('.modal-sheet').forEach(s => s.classList.remove('active')); document.getElementById('overlay').style.display = 'none'; }
+    
+    function switchMode(m) {
+        state.mode = m;
+        document.getElementById('m-self').classList.toggle('active', m === 'self');
+        document.getElementById('m-care').classList.toggle('active', m === 'care');
+        document.getElementById('view-self').style.display = (m === 'self') ? 'block' : 'none';
+        document.getElementById('view-care').style.display = (m === 'care') ? 'block' : 'none';
+        closeAll();
+    }
+
+    function openSheet(id) {
+        closeAll();
+        if(id === 'sheet-invite-mgr') renderContacts();
+        if(id === 'sheet-note') updateNoteTargetOptions();
+        document.getElementById(id).classList.add('active');
+        document.getElementById('overlay').style.display = 'block';
+    }
+
+    // --- 聯絡人配對邏輯 ---
+    function generateNewCode() {
+        state.tempCode = "KNOT-" + Math.floor(10 + Math.random() * 90);
+        document.getElementById('generated-code').innerText = state.tempCode;
+    }
+
+    function pairWithUser() {
+        const code = document.getElementById('input-pair-code').value.toUpperCase();
+        if(code === "KNOT-88") { // 模擬配對成功
+            alert("配對成功！您已成為對方的守護者。");
+            document.getElementById('input-pair-code').value = "";
+            switchMode('self');
+        } else {
+            alert("代碼無效或已過期。");
+        }
+    }
+
+    function renderContacts() {
+        const list = document.getElementById('contacts-list');
+        list.innerHTML = state.contacts.map(c => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 0; border-bottom:1px solid #F9F9F9;">
+                <div><strong>${c.name}</strong><br><small style="color:#BBB">已建立連結</small></div>
+                <div style="color:#EB5757; font-weight:600; cursor:pointer;" onclick="removeContact(${c.id})">移除</div>
+            </div>
+        `).join('');
+        document.getElementById('side-contact-count').innerText = state.contacts.length + ' 位';
+    }
+
+    function removeContact(id) {
+        state.contacts = state.contacts.filter(c => c.id !== id);
+        renderContacts();
+        renderNotes();
+    }
+
+    // --- 叮嚀與聯絡人連動 ---
+    function updateNoteTargetOptions() {
+        const select = document.getElementById('n-target-select');
+        // 根據現有的聯絡人動態產生選項
+        if(state.contacts.length === 0) {
+            select.innerHTML = '<option value="">(尚未配對聯絡人)</option>';
+        } else {
+            select.innerHTML = state.contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+    }
+
+    function openNoteSheet() { openSheet('sheet-note'); }
+
+    function saveNote() {
+        const title = document.getElementById('n-title').value;
+        const body = document.getElementById('n-body').value;
+        const targetId = document.getElementById('n-target-select').value;
+        if(!title || !targetId) return alert("請填寫標題並選擇一位收件人");
+
+        state.notes.push({ id: Date.now(), title, body, targetId: parseInt(targetId) });
+        renderNotes();
+        closeAll();
+    }
+
+    function renderNotes() {
+        const list = document.getElementById('note-list');
+        list.innerHTML = state.notes.map(n => {
+            const contact = state.contacts.find(c => c.id === n.targetId);
+            return `
+                <div class="note-card" onclick="alert('編輯叮嚀')">
+                    <div style="font-weight:700; font-size:1.1rem; margin-bottom:6px;">${n.title}</div>
+                    <div style="color:var(--text-sub); font-size:0.9rem;">${n.body}</div>
+                    <div class="target-tag">🔐 指派給：${contact ? contact.name : '<span style="color:red">聯絡人已移除</span>'}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updateHours() {
+        state.hours = document.getElementById('select-hours').value;
+        document.getElementById('side-hours').innerText = state.hours + ' 小時';
+    }
+
+    renderNotes();
+</script>
+
+</body>
+</html>
